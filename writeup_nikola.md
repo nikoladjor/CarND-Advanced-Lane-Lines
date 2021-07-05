@@ -19,7 +19,8 @@ The goals / steps of this project are the following:
 [//]: # (Image References)
 
 [image1]: ./output_images/output_calibration1.jpg "Undistorted"
-[image2]: ./output_images/undistorted_test1.png "Road Transformed"
+[image2_org]: ./test_images/test2.jpg "Road Transformed"
+[image2]: ./output_images/undistorted_test2.jpg "Road Transformed"
 [image3]: ./examples/binary_combo_example.jpg "Binary Example"
 [image4]: ./examples/warped_straight_lines.jpg "Warp Example"
 [image5]: ./examples/color_fit_lines.jpg "Fit Visual"
@@ -48,29 +49,59 @@ First, all images are loaded using `glob` package since the file naming was done
 
 For every loaded image, I start by preparing "object points", which will be the (x, y, z) coordinates of the chessboard corners in the world. Here I am assuming the chessboard is fixed on the (x, y) plane at z=0, such that the object points are the same for each calibration image.  Thus, `objp` is just a replicated array of coordinates, and `objpoints` will be appended with a copy of it every time I successfully detect all chessboard corners in a test image.  `imgpoints` will be appended with the (x, y) pixel position of each of the corners in the image plane with each successful chessboard detection.  
 
-I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function.  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result:
+I then used the output `objpoints` and `imgpoints` to compute the camera calibration and distortion coefficients using the `cv2.calibrateCamera()` function:
+```python
+ret, mtx, dist, rvecs, tvecs = cv2.calibrateCamera(objpoints, imgpoints, gray.shape[::-1], None, None)
+```
+
+Calibration parameters are saved for further usage in the project:
+```python
+# Store camera calibration
+
+res_dict = dict(ret=ret, mtx=mtx, dist=dist, rvecs=rvecs, tvecs=tvecs)
+
+fname = 'calibrationSettings.pk'
+outfile = open(fname,'wb')
+pickle.dump(res_dict,outfile)
+outfile.close()
+```
+
+  I applied this distortion correction to the test image using the `cv2.undistort()` function and obtained this result:
+
 ![alt text][image1]
 
 ### Pipeline (single images)
+In order to have more controlled environment for the pipeline and the batch processing of frames, entire functionality after camera calibration is implemented into the module `lane_finder.py`. I created the class `LaneFinder` into which image transformations are implemented as methods (some of them as `@staticmethod`).
 
 #### 1. Provide an example of a distortion-corrected image.
 
 Distortion-correction was performed on all test images using following code in Jupyter notebook:
 ``` python
-fname2test = images[0]
-outfname_base = fname2test.split('\\')[1].split('.')[0]
-img = cv2.imread(fname2test)
-undist = cv2.undistort(img, mtx, dist, None, mtx)
-fig,ax = plt.subplots(ncols=2,figsize=(12,9))
-ax[0].imshow(img)
-ax[0].set_title('Original Image',fontsize=18)
-ax[1].imshow(undist)
-ax[1].set_title('Undistorted Image',fontsize=18)
+from lane_finder.LaneFinder import LaneFinder
 
-fig.savefig(f'./output_images/output_{outfname_base}.png',dpi=300)
+ll = LaneFinder(
+    calibration_file='./calibrationSettings.pk', 
+    binarization_settings_file='./binarization_settings.json', 
+    perspective_settings_file='perspective_settings.json', 
+    road_settings_file='./road_settings.json')
+
+tst_fnames = os.listdir('./test_images/')
+
+for ii,ff in enumerate(tst_fnames):
+    img = plt.imread(f'./test_images/{ff}')
+    ll.process_frame(img);
+    fig, ax = plt.subplots(nrows=2,figsize=(12,9))
+    ax[0].imshow(img)
+    ax[0].set_title('Original Image')
+    ax[1].imshow(ll.corrected_image)
+    ax[1].set_title('Undistorted Image')
+    out_name_base = ff.split('.')[0]
+    fig.tight_layout()
+    ll.reset_frame()
+    fig.savefig(f'./output_images/undistorted_{out_name_base}.jpg')
 ```
 
-To demonstrate this step, on of the distortion-corrected images is shown:
+To demonstrate this step, one of the distortion-corrected images (`test2.jpg`) is shown:
 ![alt text][image2]
 
 #### 2. Describe how (and identify where in your code) you used color transforms, gradients or other methods to create a thresholded binary image.  Provide an example of a binary image result.
