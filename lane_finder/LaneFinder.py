@@ -217,9 +217,9 @@ class LaneFinder:
         # Check if color order is OK with pyVideo
         # If not, change to RGB, since all methods are made for RGB
         self.output_image = None    # Just to make sure
-        self.set_image(img)
-        self.binarize()
-        self.warp_binarized()
+        self.set_image(img) # Stores original image and applies distortion correction
+        self.binarize()     # Uses settings defined at init to binarize the input image
+        self.warp_binarized()   # Change perspective for lane finding
 
         # update this to have a selection where previoys runs can be taken into account
         if self._prev_fit is None:

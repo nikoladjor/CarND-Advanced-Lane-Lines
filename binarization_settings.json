@@ -1,0 +1,16 @@
+{
+    "kernel_size": 3,
+
+    "gradient_x":{
+        "channel": "S",
+        "threshold": [8,200]
+    },
+    "gradient_direction":{
+        "channel": "S",
+        "threshold_degree": [30,60]
+    },
+    "color_threshold": {
+        "color": ["S","L"],
+        "threshold":[[150,255], [200,255]]
+    }
+}
